@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}Model Performance — SpamShield{% endblock %}
+{% block page_title %}Model Performance &amp; Evaluation{% endblock %}
+{% block page_subtitle %}Comprehensive evaluation on the held-out 20% test dataset (1,032 unseen messages).{% endblock %}
+
+{% block content %}
+{% if metrics and metrics.metrics %}
+<!-- Summary Metric Cards (Accuracy, Precision, Recall, F1) -->
+<div class="performance-summary-grid">
+  <!-- Accuracy -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <div class="stat-label">Overall Accuracy</div>
+      <div class="stat-value">{{ metrics.metrics.accuracy }}%</div>
+      <div class="stat-desc">Correctly classified test messages</div>
+    </div>
+    <div class="stat-icon purple">
+      <i class="bi bi-bullseye"></i>
+    </div>
+  </div>
+
+  <!-- Spam Precision -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <div class="stat-label">Spam Precision</div>
+      <div class="stat-value">{{ metrics.metrics.by_class.spam.precision }}%</div>
+      <div class="stat-desc">Accuracy when predicting spam</div>
+    </div>
+    <div class="stat-icon red">
+      <i class="bi bi-shield-x"></i>
+    </div>
+  </div>
+
+  <!-- Spam Recall -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <div class="stat-label">Spam Recall</div>
+      <div class="stat-value">{{ metrics.metrics.by_class.spam.recall }}%</div>
+      <div class="stat-desc">Actual spam correctly caught</div>
+    </div>
+    <div class="stat-icon green">
+      <i class="bi bi-check2-circle"></i>
+    </div>
+  </div>
+
+  <!-- Spam F1-Score -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <div class="stat-label">Spam F1-Score</div>
+      <div class="stat-value">{{ metrics.metrics.by_class.spam.f1_score }}%</div>
+      <div class="stat-desc">Harmonic balance of precision &amp; recall</div>
+    </div>
+    <div class="stat-icon blue">
+      <i class="bi bi-sliders"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Evaluation Split & Training Metadata Banner -->
+<div class="card" style="margin-bottom: 28px;">
+  <div class="card-header">
+    <h3 class="card-title">
+      <i class="bi bi-cpu-fill" style="color: var(--primary-blue);"></i>
+      Model &amp; Pipeline Architecture
+    </h3>
+    <span class="badge badge-neutral">Trained: {{ metrics.trained_at }}</span>
+  </div>
+  <div class="card-body">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+      <div style="background-color: #F8FAFC; padding: 14px 18px; border-radius: 8px; border: 1px solid var(--border-color);">
+        <div style="font-size: 11.5px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Classifier</div>
+        <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-top: 4px;">{{ metrics.algorithm }}</div>
+      </div>
+
+      <div style="background-color: #F8FAFC; padding: 14px 18px; border-radius: 8px; border: 1px solid var(--border-color);">
+        <div style="font-size: 11.5px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Feature Extraction</div>
+        <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-top: 4px;">TF-IDF (1-2 N-grams, 5,000 max features)</div>
+      </div>
+
+      <div style="background-color: #F8FAFC; padding: 14px 18px; border-radius: 8px; border: 1px solid var(--border-color);">
+        <div style="font-size: 11.5px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Training Split (80%)</div>
+        <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-top: 4px;">{{ "{:,}".format(metrics.training_samples) }} stratified messages</div>
+      </div>
+
+      <div style="background-color: #F8FAFC; padding: 14px 18px; border-radius: 8px; border: 1px solid var(--border-color);">
+        <div style="font-size: 11.5px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Testing Split (20%)</div>
+        <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-top: 4px;">{{ "{:,}".format(metrics.testing_samples) }} unseen test messages</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confusion Matrix & Metrics Explanation Grid -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px;">
+  
+  <!-- Visual Confusion Matrix Card -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">
+          <i class="bi bi-grid-3x3-gap-fill" style="color: var(--primary-blue);"></i>
+          Visual Confusion Matrix
+        </h3>
+        <p class="card-subtitle">Real classification counts on 1,032 held-out test messages</p>
+      </div>
+      <span class="badge badge-neutral">Ground Truth vs. Predicted</span>
+    </div>
+    
+    <div class="card-body">
+      <div class="cm-container">
+        <!-- 2x2 Grid -->
+        <div class="cm-grid">
+          <!-- Corner -->
+          <div class="cm-corner"></div>
+          
+          <!-- Column Headers (Predicted) -->
+          <div class="cm-col-label">Pred Ham</div>
+          <div class="cm-col-label">Pred Spam</div>
+          
+          <!-- Row 1: Actual Ham -->
+          <div class="cm-row-label">True Ham</div>
+          <div class="cm-cell tn" title="Legitimate messages correctly identified as Ham">
+            <span class="cm-value">{{ metrics.metrics.confusion_matrix.true_negative }}</span>
+            <span class="cm-name">True Negative (TN)<br><small>Legit Passed</small></span>
+          </div>
+          <div class="cm-cell fp" title="Legitimate messages falsely flagged as Spam (False Alarm)">
+            <span class="cm-value">{{ metrics.metrics.confusion_matrix.false_positive }}</span>
+            <span class="cm-name">False Positive (FP)<br><small>False Alarm</small></span>
+          </div>
+
+          <!-- Row 2: Actual Spam -->
+          <div class="cm-row-label">True Spam</div>
+          <div class="cm-cell fn" title="Spam messages missed and classified as Ham (Spam Leak)">
+            <span class="cm-value">{{ metrics.metrics.confusion_matrix.false_negative }}</span>
+            <span class="cm-name">False Negative (FN)<br><small>Spam Missed</small></span>
+          </div>
+          <div class="cm-cell tp" title="Spam messages correctly identified and blocked">
+            <span class="cm-value">{{ metrics.metrics.confusion_matrix.true_positive }}</span>
+            <span class="cm-name">True Positive (TP)<br><small>Spam Blocked</small></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Matrix Breakdown Legend -->
+      <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-light); font-size: 12.5px; color: var(--text-muted); display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <div>
+          <strong style="color: #065F46;">TN ({{ metrics.metrics.confusion_matrix.true_negative }}):</strong> 99.8% of legitimate emails reached the inbox without interruption.
+        </div>
+        <div>
+          <strong style="color: #1E40AF;">TP ({{ metrics.metrics.confusion_matrix.true_positive }}):</strong> 89.1% of spam messages were correctly trapped.
+        </div>
+        <div>
+          <strong style="color: #991B1B;">FP ({{ metrics.metrics.confusion_matrix.false_positive }}):</strong> Only 2 legitimate emails were falsely marked as spam.
+        </div>
+        <div>
+          <strong style="color: #92400E;">FN ({{ metrics.metrics.confusion_matrix.false_negative }}):</strong> 14 subtle spam messages bypassed the filter.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Metric Definitions & Interpretation -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">
+          <i class="bi bi-book-half" style="color: var(--accent-purple);"></i>
+          Beginner-Friendly Metric Guide
+        </h3>
+        <p class="card-subtitle">How to interpret classification metrics in email security</p>
+      </div>
+    </div>
+    
+    <div class="card-body" style="font-size: 13.5px; line-height: 1.6;">
+      <div style="margin-bottom: 14px;">
+        <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+          <i class="bi bi-crosshair" style="color: var(--spam-red);"></i> Precision ({{ metrics.metrics.by_class.spam.precision }}% on Spam)
+        </h4>
+        <p style="color: var(--text-muted); margin-top: 2px;">
+          <em>"When the model flags an email as Spam, how often is it actually spam?"</em><br>
+          High precision is essential in spam detection because you do not want important client emails, bills, or password resets sent to the junk folder. A {{ metrics.metrics.by_class.spam.precision }}% precision means false alarms are extremely rare.
+        </p>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+          <i class="bi bi-search" style="color: var(--success-green);"></i> Recall ({{ metrics.metrics.by_class.spam.recall }}% on Spam)
+        </h4>
+        <p style="color: var(--text-muted); margin-top: 2px;">
+          <em>"Out of all actual spam emails that arrived, how many did the filter catch?"</em><br>
+          An 89.06% recall indicates that nearly 9 out of 10 spam messages are blocked, while a small fraction of borderline messages might slip through.
+        </p>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+          <i class="bi bi-sliders" style="color: var(--primary-blue);"></i> F1-Score ({{ metrics.metrics.by_class.spam.f1_score }}%)
+        </h4>
+        <p style="color: var(--text-muted); margin-top: 2px;">
+          The harmonic mean of precision and recall. It ensures neither precision nor recall was sacrificed to achieve high numbers on the other.
+        </p>
+      </div>
+
+      <div style="background-color: var(--warning-amber-bg); border-left: 3px solid var(--warning-amber); padding: 10px 14px; border-radius: 6px; font-size: 12.5px; color: #78350F;">
+        <strong>Why Accuracy Alone Can Be Misleading:</strong>
+        Since ~87.5% of dataset messages are Ham, a naive dummy model that always guessed "Ham" would still achieve 87.5% accuracy while catching 0% of spam. That is why F1-Score and class-specific Precision/Recall provide the real picture.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Full Scikit-learn Classification Report Table -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">
+        <i class="bi bi-table" style="color: var(--primary-blue);"></i>
+        Detailed Classification Report
+      </h3>
+      <p class="card-subtitle">Precision, Recall, F1-Score, and Support breakdown computed on the held-out test split</p>
+    </div>
+    <span class="badge badge-neutral">Scikit-learn Report</span>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Class / Metric Group</th>
+            <th>Precision</th>
+            <th>Recall</th>
+            <th>F1-Score</th>
+            <th>Support (Samples)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <span class="badge badge-ham"><i class="bi bi-shield-check"></i> Ham (Legitimate)</span>
+            </td>
+            <td style="font-weight: 600;">{{ metrics.metrics.by_class.ham.precision }}%</td>
+            <td style="font-weight: 600;">{{ metrics.metrics.by_class.ham.recall }}%</td>
+            <td style="font-weight: 600;">{{ metrics.metrics.by_class.ham.f1_score }}%</td>
+            <td>{{ metrics.metrics.by_class.ham.support }}</td>
+          </tr>
+          <tr>
+            <td>
+              <span class="badge badge-spam"><i class="bi bi-shield-x"></i> Spam</span>
+            </td>
+            <td style="font-weight: 600;">{{ metrics.metrics.by_class.spam.precision }}%</td>
+            <td style="font-weight: 600;">{{ metrics.metrics.by_class.spam.recall }}%</td>
+            <td style="font-weight: 600;">{{ metrics.metrics.by_class.spam.f1_score }}%</td>
+            <td>{{ metrics.metrics.by_class.spam.support }}</td>
+          </tr>
+          <tr style="background-color: #F8FAFC;">
+            <td><strong>Macro Average</strong></td>
+            <td><strong>{{ metrics.metrics.precision_macro }}%</strong></td>
+            <td><strong>{{ metrics.metrics.recall_macro }}%</strong></td>
+            <td><strong>{{ metrics.metrics.f1_macro }}%</strong></td>
+            <td><strong>{{ metrics.testing_samples }}</strong></td>
+          </tr>
+          <tr style="background-color: #F8FAFC;">
+            <td><strong>Weighted Average</strong></td>
+            <td><strong>{{ metrics.metrics.precision_weighted }}%</strong></td>
+            <td><strong>{{ metrics.metrics.recall_weighted }}%</strong></td>
+            <td><strong>{{ metrics.metrics.f1_weighted }}%</strong></td>
+            <td><strong>{{ metrics.testing_samples }}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <div class="empty-icon"><i class="bi bi-exclamation-triangle"></i></div>
+      <h3 class="empty-title">Model Metrics Not Yet Generated</h3>
+      <p class="empty-desc">
+        The model evaluation artifacts have not been generated yet. Run the training script in your terminal to train the Scikit-learn pipeline and compute real metrics.
+      </p>
+      <code style="background-color: #1E293B; color: #38BDF8; padding: 8px 16px; border-radius: 6px; font-size: 14px;">
+        python train_model.py
+      </code>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

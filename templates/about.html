@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}About Project — SpamShield{% endblock %}
+{% block page_title %}About SpamShield{% endblock %}
+{% block page_subtitle %}Architecture, machine learning pipeline, dataset methodology, and technical overview.{% endblock %}
+
+{% block content %}
+<div style="max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px;">
+
+  <!-- Hero Overview Card -->
+  <div class="card" style="background: linear-gradient(135deg, #14213D 0%, #1E3A8A 100%); color: #FFFFFF;">
+    <div class="card-body" style="padding: 32px 36px;">
+      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px;">
+        <div class="brand-icon-wrapper" style="width: 48px; height: 48px;">
+          <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Logo" style="width: 32px; height: 32px;">
+        </div>
+        <div>
+          <h2 style="font-size: 24px; font-weight: 800; color: #FFFFFF; line-height: 1.2;">SpamShield</h2>
+          <span style="font-size: 14px; color: #93C5FD; font-weight: 500;">"Smarter Email. Safer Inbox."</span>
+        </div>
+      </div>
+      <p style="font-size: 14.5px; color: #E2E8F0; line-height: 1.6; max-width: 780px;">
+        SpamShield is a full-stack, portfolio-grade Email and Message Spam Detection system built with Python, Scikit-learn, Flask, and a modern SaaS UI. It leverages supervised machine learning—specifically Term Frequency-Inverse Document Frequency (TF-IDF) feature engineering coupled with a Multinomial Naive Bayes probabilistic classifier—to identify spam with real-world empirical validation.
+      </p>
+    </div>
+  </div>
+
+  <!-- End-to-End Pipeline Workflow -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">
+          <i class="bi bi-diagram-3-fill" style="color: var(--primary-blue);"></i>
+          End-to-End Machine Learning Pipeline
+        </h3>
+        <p class="card-subtitle">How SpamShield transforms raw message text into reliable classification verdicts</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+        
+        <!-- Step 1 -->
+        <div style="background-color: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <span style="width: 28px; height: 28px; background-color: var(--primary-blue); color: #FFF; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px;">1</span>
+            <h4 style="font-size: 14.5px; font-weight: 700;">Data Cleaning &amp; Policy</h4>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+            Raw data is parsed using robust fallback encodings. Missing values are discarded and exact duplicates are pruned (keeping first occurrence) to prevent test-set data contamination.
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div style="background-color: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <span style="width: 28px; height: 28px; background-color: var(--primary-blue); color: #FFF; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px;">2</span>
+            <h4 style="font-size: 14.5px; font-weight: 700;">Stratified 80/20 Split</h4>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+            The dataset is partitioned into 4,128 training examples and 1,032 test examples using stratification to preserve natural class balance across both sets.
+          </p>
+        </div>
+
+        <!-- Step 3 -->
+        <div style="background-color: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <span style="width: 28px; height: 28px; background-color: var(--primary-blue); color: #FFF; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px;">3</span>
+            <h4 style="font-size: 14.5px; font-weight: 700;">TF-IDF Vectorization</h4>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+            Converts text into numerical feature vectors using 1-to-2 word n-grams, sublinear frequency scaling, and English stop-word filtering. Fit strictly on training data only.
+          </p>
+        </div>
+
+        <!-- Step 4 -->
+        <div style="background-color: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <span style="width: 28px; height: 28px; background-color: var(--primary-blue); color: #FFF; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px;">4</span>
+            <h4 style="font-size: 14.5px; font-weight: 700;">Multinomial Naive Bayes</h4>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+            Applies Bayes' theorem with multinomial word frequency likelihoods and additive Laplace smoothing (&alpha;=0.1) to compute posterior class probabilities.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Technology Stack Breakdown -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">
+        <i class="bi bi-stack" style="color: var(--accent-purple);"></i>
+        Technology Stack &amp; Architecture
+      </h3>
+    </div>
+    <div class="card-body">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+        
+        <div>
+          <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 10px;">
+            Machine Learning &amp; Backend
+          </h4>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-muted);">
+            <li><strong style="color: var(--text-main);">Python 3.14:</strong> High-performance core execution environment</li>
+            <li><strong style="color: var(--text-main);">Scikit-learn:</strong> Model Pipeline, TfidfVectorizer, MultinomialNB, and metrics</li>
+            <li><strong style="color: var(--text-main);">Pandas &amp; NumPy:</strong> Data wrangling, normalization, and deduplication</li>
+            <li><strong style="color: var(--text-main);">Flask:</strong> Lightweight WSGI web framework, template engine, and RESTful routing</li>
+            <li><strong style="color: var(--text-main);">Joblib:</strong> Model serialization and deserialization</li>
+            <li><strong style="color: var(--text-main);">SQLite:</strong> Local privacy-preserving prediction history persistence</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 10px;">
+            Frontend &amp; Visualization
+          </h4>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-muted);">
+            <li><strong style="color: var(--text-main);">Semantic HTML5:</strong> Accessible layout with high-contrast elements</li>
+            <li><strong style="color: var(--text-main);">Modern CSS3:</strong> Custom design system with CSS variables, responsive grid &amp; flexbox</li>
+            <li><strong style="color: var(--text-main);">Vanilla JavaScript:</strong> Asynchronous AJAX fetch API, dynamic DOM updates</li>
+            <li><strong style="color: var(--text-main);">Chart.js:</strong> Interactive, responsive doughnut and bar charts for analytics</li>
+            <li><strong style="color: var(--text-main);">Bootstrap Icons:</strong> Uniform, crisp iconography</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-World Limitations & Disclaimers -->
+  <div class="card" style="border-left: 4px solid var(--warning-amber);">
+    <div class="card-header">
+      <h3 class="card-title">
+        <i class="bi bi-shield-exclamation" style="color: var(--warning-amber);"></i>
+        Real-World Considerations &amp; Limitations
+      </h3>
+    </div>
+    <div class="card-body" style="font-size: 13.5px; color: var(--text-muted); line-height: 1.6;">
+      <p style="margin-bottom: 12px;">
+        While SpamShield demonstrates portfolio-quality engineering and achieves over <strong>98% accuracy</strong> on held-out test data, real-world email security operates in an adversarial environment:
+      </p>
+      <ul style="margin-left: 20px; display: flex; flex-direction: column; gap: 8px;">
+        <li>
+          <strong>Domain &amp; Dataset Scope:</strong> The model is trained on the SMS Spam Collection dataset. While vocabulary overlaps significantly with spam emails (e.g. prizes, urgent alerts, account flags), enterprise email spam often includes multi-paragraph prose, legitimate disclaimers, or obfuscated characters.
+        </li>
+        <li>
+          <strong>Header &amp; Authentication Signals:</strong> True email security systems (e.g. Google Workspace, Microsoft Defender) evaluate sender authentication protocols such as SPF, DKIM, and DMARC, IP reputation, and TLS encryption, in addition to text body analysis.
+        </li>
+        <li>
+          <strong>Attachments &amp; URLs:</strong> Text classifiers do not scan executable files, PDFs, or live phishing URLs for malware payloads.
+        </li>
+        <li>
+          <strong>Statistical Nature:</strong> A prediction is an estimation of likelihood, not an absolute guarantee. Suspicious messages should always be treated with healthy skepticism.
+        </li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

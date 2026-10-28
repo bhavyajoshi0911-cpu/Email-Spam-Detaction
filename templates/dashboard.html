@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — SpamShield{% endblock %}
+{% block page_title %}Email Security Dashboard{% endblock %}
+{% block page_subtitle %}Analyze messages with machine learning and identify potential spam.{% endblock %}
+
+{% block content %}
+<!-- Welcome Section -->
+<div class="welcome-hero">
+  <div class="welcome-content">
+    <h2>Email Security Dashboard</h2>
+    <p>Analyze messages with machine learning and identify potential spam using real trained TF-IDF vectorization and Naive Bayes probability modeling.</p>
+  </div>
+  <div class="hero-actions">
+    <a href="{{ url_for('detect') }}" class="btn btn-primary btn-lg">
+      <i class="bi bi-shield-check"></i>
+      <span>Analyze an Email</span>
+    </a>
+  </div>
+</div>
+
+<!-- 4 Statistics Cards -->
+<div class="stats-grid">
+  <!-- Card 1: Total Messages -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <div class="stat-label">Total Dataset Messages</div>
+      <div class="stat-value">
+        {% if dataset_stats.clean_records != "N/A" %}
+          {{ "{:,}".format(dataset_stats.clean_records) }}
+        {% else %}
+          <span style="font-size: 20px; color: var(--text-light);">Unavailable</span>
+        {% endif %}
+      </div>
+      <div class="stat-desc">Cleaned &amp; deduplicated SMS/email records</div>
+    </div>
+    <div class="stat-icon blue">
+      <i class="bi bi-envelope-fill"></i>
+    </div>
+  </div>
+
+  <!-- Card 2: Spam Messages -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <div class="stat-label">Spam Messages</div>
+      <div class="stat-value">
+        {% if dataset_stats.spam_count != "N/A" %}
+          {{ "{:,}".format(dataset_stats.spam_count) }}
+        {% else %}
+          <span style="font-size: 20px; color: var(--text-light);">Unavailable</span>
+        {% endif %}
+      </div>
+      <div class="stat-desc">
+        {% if dataset_stats.spam_percentage %}
+          {{ dataset_stats.spam_percentage }}% of total corpus
+        {% else %}
+          Classified as spam
+        {% endif %}
+      </div>
+    </div>
+    <div class="stat-icon red">
+      <i class="bi bi-shield-x"></i>
+    </div>
+  </div>
+
+  <!-- Card 3: Legitimate Messages -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <div class="stat-label">Legitimate Messages</div>
+      <div class="stat-value">
+        {% if dataset_stats.ham_count != "N/A" %}
+          {{ "{:,}".format(dataset_stats.ham_count) }}
+        {% else %}
+          <span style="font-size: 20px; color: var(--text-light);">Unavailable</span>
+        {% endif %}
+      </div>
+      <div class="stat-desc">
+        {% if dataset_stats.ham_percentage %}
+          {{ dataset_stats.ham_percentage }}% legitimate (Ham)
+        {% else %}
+          Verified benign messages
+        {% endif %}
+      </div>
+    </div>
+    <div class="stat-icon green">
+      <i class="bi bi-shield-check"></i>
+    </div>
+  </div>
+
+  <!-- Card 4: Model Accuracy -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <div class="stat-label">Model Accuracy</div>
+      <div class="stat-value">
+        {% if accuracy != "N/A" %}
+          {{ accuracy }}%
+        {% else %}
+          <span style="font-size: 20px; color: var(--text-light);">Unavailable</span>
+        {% endif %}
+      </div>
+      <div class="stat-desc">Evaluated on held-out test data</div>
+    </div>
+    <div class="stat-icon purple">
+      <i class="bi bi-bullseye"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard Charts (A & B) -->
+<div class="charts-grid">
+  <!-- Chart A: Dataset Class Distribution -->
+  <div class="card chart-card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">
+          <i class="bi bi-pie-chart-fill" style="color: var(--primary-blue);"></i>
+          Dataset Distribution (Ham vs. Spam)
+        </h3>
+        <p class="card-subtitle">Real class proportions from the loaded training dataset</p>
+      </div>
+      <span class="badge badge-neutral">Class Balance</span>
+    </div>
+    <div class="card-body">
+      <div class="chart-wrapper">
+        <canvas id="classDistributionChart"></canvas>
+      </div>
+    </div>
+    <div class="card-footer" style="display: flex; justify-content: space-around; font-size: 12.5px;">
+      <div>
+        <span style="color: var(--success-green); font-weight: 700;">● Legitimate:</span>
+        {{ dataset_stats.ham_percentage|default(0) }}% ({{ "{:,}".format(dataset_stats.ham_count|default(0)) }})
+      </div>
+      <div>
+        <span style="color: var(--spam-red); font-weight: 700;">● Spam:</span>
+        {{ dataset_stats.spam_percentage|default(0) }}% ({{ "{:,}".format(dataset_stats.spam_count|default(0)) }})
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart B: Model Performance Metrics -->
+  <div class="card chart-card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">
+          <i class="bi bi-bar-chart-line-fill" style="color: var(--accent-purple);"></i>
+          Model Evaluation Metrics (Held-Out Test Set)
+        </h3>
+        <p class="card-subtitle">Precision, Recall, and F1-Score calculated across classes</p>
+      </div>
+      <span class="badge badge-neutral">Test Evaluation</span>
+    </div>
+    <div class="card-body">
+      <div class="chart-wrapper">
+        <canvas id="modelPerformanceChart"></canvas>
+      </div>
+    </div>
+    <div class="card-footer" style="font-size: 12.5px; color: var(--text-muted);">
+      <i class="bi bi-info-circle"></i> High precision minimizes false alarms; balanced recall catches malicious attempts.
+    </div>
+  </div>
+</div>
+
+<!-- Recent Activity Section -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">
+        <i class="bi bi-clock-history" style="color: var(--primary-blue);"></i>
+        Recent Message Analyses
+      </h3>
+      <p class="card-subtitle">Live inspection log from current and previous sessions</p>
+    </div>
+    <a href="{{ url_for('history') }}" class="btn btn-outline btn-sm">
+      <span>View Full History</span>
+      <i class="bi bi-arrow-right"></i>
+    </a>
+  </div>
+  
+  <div class="card-body" style="padding: 0;">
+    {% if recent_predictions and recent_predictions|length > 0 %}
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Subject / Snippet</th>
+            <th>Prediction</th>
+            <th>Spam Prob</th>
+            <th>Ham Prob</th>
+            <th>Risk Level</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in recent_predictions %}
+          <tr>
+            <td style="white-space: nowrap; font-size: 12px; color: var(--text-muted);">
+              {{ item.timestamp }}
+            </td>
+            <td>
+              <div style="font-weight: 600; color: var(--text-main); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {% if item.subject %}
+                  <strong>{{ item.subject }}</strong> —
+                {% endif %}
+                {{ item.message_preview }}
+              </div>
+            </td>
+            <td>
+              {% if item.prediction == 'spam' %}
+                <span class="badge badge-spam">
+                  <i class="bi bi-shield-x"></i> SPAM
+                </span>
+              {% else %}
+                <span class="badge badge-ham">
+                  <i class="bi bi-shield-check"></i> NOT SPAM
+                </span>
+              {% endif %}
+            </td>
+            <td style="font-weight: 600; color: var(--spam-red);">
+              {{ item.spam_probability }}%
+            </td>
+            <td style="font-weight: 600; color: var(--success-green);">
+              {{ item.ham_probability }}%
+            </td>
+            <td>
+              <span class="badge {% if 'High' in item.risk_level %}badge-spam{% elif 'Low' in item.risk_level %}badge-ham{% else %}badge-neutral{% endif %}">
+                {{ item.risk_level }}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-outline btn-sm view-detail-btn"
+                      data-subject="{{ item.subject|e }}"
+                      data-snippet="{{ item.message_preview|e }}"
+                      data-label="{{ item.label }}"
+                      data-confidence="{{ item.confidence }}"
+                      data-spam="{{ item.spam_probability }}"
+                      data-ham="{{ item.ham_probability }}"
+                      data-time="{{ item.timestamp }}">
+                <i class="bi bi-eye"></i> Details
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">
+        <i class="bi bi-inbox"></i>
+      </div>
+      <h4 class="empty-title">No Messages Analyzed Yet</h4>
+      <p class="empty-desc">Run your first spam detection scan to start tracking recent classifications here.</p>
+      <a href="{{ url_for('detect') }}" class="btn btn-primary">
+        <i class="bi bi-shield-plus"></i> Analyze Your First Message
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Prediction Detail Modal -->
+<div class="modal-backdrop" id="detailModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">Prediction Details</h3>
+      <button class="modal-close" id="modalCloseBtn">&times;</button>
+    </div>
+    <div class="modal-body" id="modalContent">
+      <!-- Populated via JavaScript -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" id="modalCloseBtn2">Close</button>
+      <a href="{{ url_for('detect') }}" class="btn btn-primary btn-sm">Analyze Another</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Detect Email Spam — SpamShield{% endblock %}
+{% block page_title %}Detect Email Spam{% endblock %}
+{% block page_subtitle %}Paste an email or message below to analyze it using our machine learning model.{% endblock %}
+
+{% block content %}
+<div class="detector-container">
+  
+  <!-- Sample Messages Selector -->
+  <div class="sample-messages-box">
+    <div class="sample-label">
+      <i class="bi bi-lightbulb-fill" style="color: #F59E0B;"></i>
+      <span>Try Quick Sample Messages (Illustrative test cases):</span>
+    </div>
+    <div class="sample-pills">
+      <button type="button" class="sample-pill" id="sampleLegitMeeting">
+        <span class="pill-tag ham">Ham</span>
+        <span>Team Sync Meeting</span>
+      </button>
+
+      <button type="button" class="sample-pill" id="sampleLegitOrder">
+        <span class="pill-tag ham">Ham</span>
+        <span>Order Invoice Confirmation</span>
+      </button>
+
+      <button type="button" class="sample-pill" id="sampleSpamPrize">
+        <span class="pill-tag spam">Spam</span>
+        <span>Prize Winner Notification</span>
+      </button>
+
+      <button type="button" class="sample-pill" id="sampleSpamUrgent">
+        <span class="pill-tag spam">Spam</span>
+        <span>Urgent Account Suspension</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Email Input Form Card -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">
+          <i class="bi bi-shield-lock-fill" style="color: var(--primary-blue);"></i>
+          Message Classification Workspace
+        </h3>
+        <p class="card-subtitle">Input email subject and body content for real-time TF-IDF feature analysis</p>
+      </div>
+      <button type="button" class="btn btn-outline btn-sm" id="clearBtn">
+        <i class="bi bi-eraser-fill"></i> Clear All
+      </button>
+    </div>
+
+    <div class="card-body">
+      <!-- Error Alert Box -->
+      <div id="errorAlert" style="display: none; background-color: #FEE2E2; border: 1px solid #FECACA; color: #991B1B; padding: 12px 18px; border-radius: 8px; margin-bottom: 18px; font-size: 13.5px; align-items: center; gap: 8px;">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span id="errorMessageText">Validation error message</span>
+      </div>
+
+      <form id="detectForm">
+        <!-- Optional Subject Input -->
+        <div class="form-group">
+          <label for="emailSubject" class="form-label">
+            Email Subject <span style="color: var(--text-muted); font-weight: 400;">(Optional)</span>
+          </label>
+          <input type="text"
+                 id="emailSubject"
+                 name="subject"
+                 class="form-control"
+                 placeholder="e.g., Quick check-in regarding Q3 roadmap proposal"
+                 maxlength="200"
+                 autocomplete="off">
+        </div>
+
+        <!-- Message Body Textarea -->
+        <div class="form-group">
+          <label for="emailMessage" class="form-label">
+            Email Message Content <span style="color: var(--spam-red);">*</span>
+          </label>
+          <textarea id="emailMessage"
+                    name="message"
+                    class="form-control"
+                    placeholder="Paste your email subject and message content here..."
+                    required></textarea>
+          
+          <div class="textarea-footer">
+            <span id="counterStats">0 characters &bull; 0 words</span>
+            <span>Max 50,000 characters</span>
+          </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-bar">
+          <div style="font-size: 12.5px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+            <i class="bi bi-shield-check" style="color: var(--primary-blue);"></i>
+            <span>Local privacy: Content is processed strictly on your local machine.</span>
+          </div>
+
+          <button type="submit" id="analyzeBtn" class="btn btn-primary btn-lg">
+            <span id="btnIcon"><i class="bi bi-search"></i></span>
+            <span id="btnSpinner" style="display: none;" class="spinner-border spinner-border-sm" role="status">
+              <i class="bi bi-arrow-repeat spin-icon"></i>
+            </span>
+            <span id="btnLabel">Analyze Message</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dynamic Prediction Result Card (Rendered via JS without page reload) -->
+  <div id="resultPanel" class="result-panel">
+    <div class="result-header">
+      <div class="result-verdict">
+        <div class="verdict-icon" id="verdictIcon">
+          <i class="bi bi-shield-check"></i>
+        </div>
+        <div class="verdict-text">
+          <h3 id="verdictHeading">Likely Legitimate</h3>
+          <p id="verdictExplanation">The machine learning model evaluated this message and classified it as legitimate communication.</p>
+        </div>
+      </div>
+      <div>
+        <span class="verdict-badge" id="verdictBadge">NOT SPAM</span>
+      </div>
+    </div>
+
+    <div class="result-body">
+      <!-- Probability Distribution Bar -->
+      <div class="probability-breakdown">
+        <div class="prob-title">
+          <span>Statistical Model Confidence</span>
+          <span id="confidencePercentage">98.5%</span>
+        </div>
+        <div class="dual-progress-bar">
+          <div id="probBarHam" class="progress-segment-ham" style="width: 95%;"></div>
+          <div id="probBarSpam" class="progress-segment-spam" style="width: 5%;"></div>
+        </div>
+        <div class="prob-legends">
+          <span class="legend-ham">
+            <i class="bi bi-circle-fill" style="font-size: 9px;"></i>
+            <span>Legitimate Probability:</span>
+            <strong id="probHamVal">95.0%</strong>
+          </span>
+          <span class="legend-spam">
+            <i class="bi bi-circle-fill" style="font-size: 9px;"></i>
+            <span>Spam Probability:</span>
+            <strong id="probSpamVal">5.0%</strong>
+          </span>
+        </div>
+      </div>
+
+      <!-- Metadata Pills Row -->
+      <div class="meta-pills-row">
+        <div class="meta-pill">
+          Risk Assessment: <strong id="riskAssessmentTag">Low Risk</strong>
+        </div>
+        <div class="meta-pill">
+          Length: <strong id="analyzedCharCount">0 chars</strong> (<strong id="analyzedWordCount">0 words</strong>)
+        </div>
+        <div class="meta-pill">
+          Model: <strong>Multinomial Naive Bayes</strong>
+        </div>
+        <div class="meta-pill">
+          Feature Extraction: <strong>TF-IDF N-grams (1,2)</strong>
+        </div>
+      </div>
+
+      <!-- Collapsible Analyzed Text Box -->
+      <div class="analyzed-text-accordion">
+        <div class="accordion-header" id="toggleAnalyzedText">
+          <span><i class="bi bi-file-text"></i> View Analyzed Text Submission</span>
+          <i class="bi bi-chevron-down" id="accordionIcon"></i>
+        </div>
+        <div class="accordion-body" id="analyzedContentBox" style="display: none;">
+          <!-- Analyzed content safely injected -->
+        </div>
+      </div>
+
+      <!-- Responsible Security Disclaimer -->
+      <div class="security-disclaimer">
+        <i class="bi bi-exclamation-octagon-fill"></i>
+        <div>
+          <strong>Security Notice &amp; Disclaimer:</strong>
+          This classification is based on statistical natural language processing patterns (TF-IDF features). It is <em>not</em> a guarantee that a message is completely benign or definitively malicious. Statistical classifiers do not verify sender identity, execute embedded URLs, or inspect binary attachments. Always practice defense-in-depth and inspect unexpected requests or payment links carefully.
+        </div>
+      </div>
+    </div>
+
+    <div class="result-footer">
+      <div style="font-size: 12.5px; color: var(--text-muted);">
+        Analysis saved to your local session history.
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button type="button" class="btn btn-outline btn-sm" id="analyzeAnotherBtn">
+          <i class="bi bi-arrow-repeat"></i> Analyze Another Message
+        </button>
+        <a href="{{ url_for('performance') }}" class="btn btn-secondary btn-sm">
+          <i class="bi bi-graph-up"></i> View Model Details
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

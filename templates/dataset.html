@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+
+{% block title %}Dataset Explorer — SpamShield{% endblock %}
+{% block page_title %}Dataset Explorer{% endblock %}
+{% block page_subtitle %}Explore corpus provenance, cleaning statistics, and inspect raw training records.{% endblock %}
+
+{% block content %}
+<!-- Provenance Information Alert -->
+<div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--primary-blue);">
+  <div class="card-body" style="padding: 18px 24px;">
+    <div style="display: flex; gap: 14px; align-items: flex-start;">
+      <i class="bi bi-info-circle-fill" style="font-size: 22px; color: var(--primary-blue); flex-shrink: 0; margin-top: 2px;"></i>
+      <div>
+        <h4 style="font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">
+          Dataset Provenance: SMS Spam Collection Dataset
+        </h4>
+        <p style="font-size: 13.5px; color: var(--text-muted); line-height: 1.55;">
+          This model is trained on the benchmark <strong>SMS Spam Collection</strong>, a public corpus of 5,574 mobile text and message samples tagged as legitimate (Ham) or Spam. 
+          <em>Please note:</em> Because the dataset consists predominantly of short-form messages, learned vocabulary patterns reflect SMS communication styles. While the classifier performs with exceptional precision on concise phishing, promo, and urgency tactics, real enterprise emails may have additional structural characteristics (e.g. SPF/DKIM headers, attachments, HTML formatting) that require multi-layered security controls.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dataset Cleaning & Distribution Statistics Cards -->
+<div class="stats-grid">
+  <!-- Clean Records -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <div class="stat-label">Cleaned Records</div>
+      <div class="stat-value">
+        {% if stats %}
+          {{ "{:,}".format(stats.clean_records) }}
+        {% else %}
+          N/A
+        {% endif %}
+      </div>
+      <div class="stat-desc">Deduplicated active training records</div>
+    </div>
+    <div class="stat-icon blue">
+      <i class="bi bi-database-check"></i>
+    </div>
+  </div>
+
+  <!-- Spam Messages -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <div class="stat-label">Spam Records</div>
+      <div class="stat-value">
+        {% if stats %}
+          {{ "{:,}".format(stats.spam_count) }}
+        {% else %}
+          N/A
+        {% endif %}
+      </div>
+      <div class="stat-desc">
+        {% if stats %}
+          {{ stats.spam_percentage }}% of corpus
+        {% else %}
+          N/A
+        {% endif %}
+      </div>
+    </div>
+    <div class="stat-icon red">
+      <i class="bi bi-exclamation-octagon-fill"></i>
+    </div>
+  </div>
+
+  <!-- Legitimate Messages -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <div class="stat-label">Ham Records</div>
+      <div class="stat-value">
+        {% if stats %}
+          {{ "{:,}".format(stats.ham_count) }}
+        {% else %}
+          N/A
+        {% endif %}
+      </div>
+      <div class="stat-desc">
+        {% if stats %}
+          {{ stats.ham_percentage }}% legitimate baseline
+        {% else %}
+          N/A
+        {% endif %}
+      </div>
+    </div>
+    <div class="stat-icon green">
+      <i class="bi bi-shield-check"></i>
+    </div>
+  </div>
+
+  <!-- Duplicates Handled -->
+  <div class="stat-card">
+    <div class="stat-info">
+      <div class="stat-label">Duplicates Removed</div>
+      <div class="stat-value">
+        {% if stats %}
+          {{ "{:,}".format(stats.duplicates_removed) }}
+        {% else %}
+          0
+        {% endif %}
+      </div>
+      <div class="stat-desc">Policy: Keep first occurrence</div>
+    </div>
+    <div class="stat-icon purple">
+      <i class="bi bi-trash3-fill"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Class Balance Visual Indicator -->
+<div class="card" style="margin-bottom: 28px;">
+  <div class="card-header">
+    <h3 class="card-title">
+      <i class="bi bi-pie-chart-fill" style="color: var(--primary-blue);"></i>
+      Class Balance Distribution
+    </h3>
+    <span class="badge badge-neutral">Corpus Ratio</span>
+  </div>
+  <div class="card-body">
+    <div class="dual-progress-bar" style="height: 18px; margin-bottom: 12px;">
+      <div class="progress-segment-ham" style="width: {{ stats.ham_percentage|default(87.5) }}%;" title="Ham: {{ stats.ham_percentage|default(87.5) }}%"></div>
+      <div class="progress-segment-spam" style="width: {{ stats.spam_percentage|default(12.5) }}%;" title="Spam: {{ stats.spam_percentage|default(12.5) }}%"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 13px;">
+      <span style="color: var(--success-green); font-weight: 700;">
+        <i class="bi bi-square-fill" style="font-size: 10px;"></i>
+        Ham: {{ stats.ham_percentage|default(0) }}% ({{ "{:,}".format(stats.ham_count|default(0)) }} messages)
+      </span>
+      <span style="color: var(--spam-red); font-weight: 700;">
+        <i class="bi bi-square-fill" style="font-size: 10px;"></i>
+        Spam: {{ stats.spam_percentage|default(0) }}% ({{ "{:,}".format(stats.spam_count|default(0)) }} messages)
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Interactive Dataset Records Explorer -->
+<div class="card">
+  <div class="card-header" style="flex-wrap: wrap; gap: 14px;">
+    <div>
+      <h3 class="card-title">
+        <i class="bi bi-table" style="color: var(--primary-blue);"></i>
+        Corpus Records Browser
+      </h3>
+      <p class="card-subtitle">Search keywords and filter messages in real time</p>
+    </div>
+
+    <!-- Filter & Search Controls -->
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <!-- Search Input -->
+      <div style="position: relative; width: 220px;">
+        <input type="text"
+               id="datasetSearchInput"
+               class="form-control"
+               placeholder="Search messages..."
+               style="padding: 7px 12px 7px 32px; font-size: 13px;">
+        <i class="bi bi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px;"></i>
+      </div>
+
+      <!-- Class Filter -->
+      <select id="datasetFilterSelect" class="form-control" style="width: 130px; padding: 7px 12px; font-size: 13px;">
+        <option value="">All Classes</option>
+        <option value="ham">Ham Only</option>
+        <option value="spam">Spam Only</option>
+      </select>
+
+      <button type="button" id="refreshDatasetBtn" class="btn btn-outline btn-sm" title="Reset filters">
+        <i class="bi bi-arrow-clockwise"></i> Reset
+      </button>
+    </div>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="data-table" id="datasetTable">
+        <thead>
+          <tr>
+            <th style="width: 60px;">#</th>
+            <th style="width: 140px;">Class Label</th>
+            <th>Message Content</th>
+            <th style="width: 100px;">Length</th>
+          </tr>
+        </thead>
+        <tbody id="datasetTableBody">
+          {% if preview_records and preview_records|length > 0 %}
+            {% for row in preview_records %}
+            <tr>
+              <td style="color: var(--text-muted); font-size: 12px;">{{ loop.index }}</td>
+              <td>
+                {% if row.label == 'spam' %}
+                  <span class="badge badge-spam">
+                    <i class="bi bi-shield-x"></i> SPAM
+                  </span>
+                {% else %}
+                  <span class="badge badge-ham">
+                    <i class="bi bi-shield-check"></i> HAM
+                  </span>
+                {% endif %}
+              </td>
+              <td style="word-break: break-word;">
+                {{ row.message }}
+              </td>
+              <td style="font-size: 12px; color: var(--text-muted); white-space: nowrap;">
+                {{ row.message|length }} chars
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4" style="text-align: center; padding: 32px; color: var(--text-muted);">
+                No dataset records found.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div style="font-size: 13px; color: var(--text-muted);" id="datasetPaginationInfo">
+      Showing 1 to {{ preview_records|length }} of {{ total_in_df }} records
+    </div>
+    <div style="display: flex; gap: 8px;" id="datasetPaginationControls">
+      <button class="btn btn-outline btn-sm" id="prevPageBtn" disabled>
+        <i class="bi bi-chevron-left"></i> Previous
+      </button>
+      <button class="btn btn-outline btn-sm" id="nextPageBtn">
+        Next <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Dataset Explorer AJAX Search & Pagination
+  let currentPage = 1;
+  const perPage = 25;
+
+  async function loadDatasetRecords(page = 1) {
+    const search = document.getElementById('datasetSearchInput').value.trim();
+    const label = document.getElementById('datasetFilterSelect').value;
+    const tbody = document.getElementById('datasetTableBody');
+    const info = document.getElementById('datasetPaginationInfo');
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+
+    try {
+      const url = `/api/dataset/records?page=${page}&per_page=${perPage}&search=${encodeURIComponent(search)}&label=${encodeURIComponent(label)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      currentPage = data.page;
+      tbody.innerHTML = '';
+
+      if (data.records.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 32px; color: var(--text-muted);">No matching messages found for your search criteria.</td></tr>`;
+        info.textContent = `Showing 0 of 0 records`;
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        return;
+      }
+
+      data.records.forEach((row, idx) => {
+        const rowNum = (data.page - 1) * perPage + (idx + 1);
+        const tr = document.createElement('tr');
+        
+        const isSpam = row.label.toLowerCase() === 'spam';
+        const badge = isSpam
+          ? `<span class="badge badge-spam"><i class="bi bi-shield-x"></i> SPAM</span>`
+          : `<span class="badge badge-ham"><i class="bi bi-shield-check"></i> HAM</span>`;
+
+        tr.innerHTML = `
+          <td style="color: var(--text-muted); font-size: 12px;">${rowNum}</td>
+          <td>${badge}</td>
+          <td style="word-break: break-word;">${escapeHtml(row.message)}</td>
+          <td style="font-size: 12px; color: var(--text-muted); white-space: nowrap;">${row.message.length} chars</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const start = (data.page - 1) * perPage + 1;
+      const end = Math.min(start + data.records.length - 1, data.total);
+      info.textContent = `Showing ${start} to ${end} of ${data.total.toLocaleString()} records`;
+
+      prevBtn.disabled = currentPage <= 1;
+      nextBtn.disabled = currentPage >= data.total_pages;
+
+    } catch (err) {
+      console.error('Failed to load dataset records:', err);
+    }
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return text.replace(/[&<>"']/g, m => map[m]);
+  }
+
+  document.getElementById('datasetSearchInput').addEventListener('input', debounce(() => {
+    loadDatasetRecords(1);
+  }, 300));
+
+  document.getElementById('datasetFilterSelect').addEventListener('change', () => {
+    loadDatasetRecords(1);
+  });
+
+  document.getElementById('refreshDatasetBtn').addEventListener('click', () => {
+    document.getElementById('datasetSearchInput').value = '';
+    document.getElementById('datasetFilterSelect').value = '';
+    loadDatasetRecords(1);
+  });
+
+  document.getElementById('prevPageBtn').addEventListener('click', () => {
+    if (currentPage > 1) loadDatasetRecords(currentPage - 1);
+  });
+
+  document.getElementById('nextPageBtn').addEventListener('click', () => {
+    loadDatasetRecords(currentPage + 1);
+  });
+
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction History — SpamShield{% endblock %}
+{% block page_title %}Prediction History{% endblock %}
+{% block page_subtitle %}Audit log of processed messages, ML classifications, and model confidence scores.{% endblock %}
+
+{% block content %}
+<!-- Privacy & Demonstration Notice -->
+<div class="card" style="margin-bottom: 24px; border-left: 4px solid #6366F1;">
+  <div class="card-body" style="padding: 16px 22px;">
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <i class="bi bi-shield-shaded" style="font-size: 20px; color: #6366F1; flex-shrink: 0;"></i>
+      <div style="font-size: 13px; color: var(--text-muted);">
+        <strong>Privacy Design Note:</strong> For demonstration purposes, logs are stored in a local SQLite database (`predictions.db`). Only truncated message previews (up to 200 characters) are retained to protect sensitive details. Do not enter confidential credentials or private communication into demo environments.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- History Controls & Table Card -->
+<div class="card">
+  <div class="card-header" style="flex-wrap: wrap; gap: 14px;">
+    <div>
+      <h3 class="card-title">
+        <i class="bi bi-clock-history" style="color: var(--primary-blue);"></i>
+        Stored Message Classifications
+      </h3>
+      <p class="card-subtitle">
+        {{ predictions|length }} record{% if predictions|length != 1 %}s{% endif %} in history
+      </p>
+    </div>
+
+    <!-- Actions: Search, Filter, Clear -->
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <!-- Search Form -->
+      <form method="GET" action="{{ url_for('history') }}" style="display: flex; gap: 8px;">
+        <div style="position: relative; width: 220px;">
+          <input type="text"
+                 name="q"
+                 value="{{ search_query }}"
+                 class="form-control"
+                 placeholder="Search history..."
+                 style="padding: 7px 12px 7px 32px; font-size: 13px;">
+          <i class="bi bi-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px;"></i>
+        </div>
+
+        <select name="filter" class="form-control" style="width: 130px; padding: 7px 12px; font-size: 13px;" onchange="this.form.submit()">
+          <option value="" {% if not current_filter %}selected{% endif %}>All Results</option>
+          <option value="spam" {% if current_filter == 'spam' %}selected{% endif %}>Spam Only</option>
+          <option value="ham" {% if current_filter == 'ham' %}selected{% endif %}>Ham Only</option>
+        </select>
+
+        {% if search_query or current_filter %}
+        <a href="{{ url_for('history') }}" class="btn btn-outline btn-sm" title="Clear search & filter">
+          <i class="bi bi-x-circle"></i>
+        </a>
+        {% endif %}
+      </form>
+
+      {% if predictions and predictions|length > 0 %}
+      <!-- Clear History Button triggers confirmation modal -->
+      <button type="button" class="btn btn-outline btn-sm" id="openClearHistoryModal" style="color: var(--spam-red); border-color: #FECACA;">
+        <i class="bi bi-trash3"></i> Clear History
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card-body" style="padding: 0;">
+    {% if predictions and predictions|length > 0 %}
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 50px;">ID</th>
+            <th style="width: 150px;">Timestamp</th>
+            <th>Subject / Snippet</th>
+            <th style="width: 120px;">Prediction</th>
+            <th style="width: 100px;">Spam %</th>
+            <th style="width: 100px;">Ham %</th>
+            <th style="width: 110px;">Risk Level</th>
+            <th style="width: 90px;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in predictions %}
+          <tr>
+            <td style="color: var(--text-muted); font-size: 12px;">#{{ item.id }}</td>
+            <td style="font-size: 12.5px; color: var(--text-muted); white-space: nowrap;">
+              {{ item.timestamp }}
+            </td>
+            <td>
+              <div style="font-weight: 600; color: var(--text-main); max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {% if item.subject %}
+                  <span style="color: var(--primary-blue);">[{{ item.subject }}]</span>
+                {% endif %}
+                {{ item.message_preview }}
+              </div>
+            </td>
+            <td>
+              {% if item.prediction == 'spam' %}
+                <span class="badge badge-spam">
+                  <i class="bi bi-shield-x"></i> SPAM
+                </span>
+              {% else %}
+                <span class="badge badge-ham">
+                  <i class="bi bi-shield-check"></i> NOT SPAM
+                </span>
+              {% endif %}
+            </td>
+            <td style="font-weight: 700; color: var(--spam-red);">
+              {{ item.spam_probability }}%
+            </td>
+            <td style="font-weight: 700; color: var(--success-green);">
+              {{ item.ham_probability }}%
+            </td>
+            <td>
+              <span class="badge {% if 'High' in item.risk_level %}badge-spam{% elif 'Low' in item.risk_level %}badge-ham{% else %}badge-neutral{% endif %}">
+                {{ item.risk_level }}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-outline btn-sm view-detail-btn"
+                      data-subject="{{ item.subject|e }}"
+                      data-snippet="{{ item.message_preview|e }}"
+                      data-label="{{ item.label }}"
+                      data-confidence="{{ item.confidence }}"
+                      data-spam="{{ item.spam_probability }}"
+                      data-ham="{{ item.ham_probability }}"
+                      data-time="{{ item.timestamp }}">
+                <i class="bi bi-eye"></i> View
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">
+        <i class="bi bi-journal-x"></i>
+      </div>
+      <h4 class="empty-title">No Predictions Recorded Yet</h4>
+      <p class="empty-desc">
+        {% if search_query or current_filter %}
+          No stored classifications match your current filter criteria.
+        {% else %}
+          Classified messages will be automatically logged to your persistent history audit trail.
+        {% endif %}
+      </p>
+      {% if search_query or current_filter %}
+        <a href="{{ url_for('history') }}" class="btn btn-secondary btn-sm">Reset Filter</a>
+      {% else %}
+        <a href="{{ url_for('detect') }}" class="btn btn-primary btn-sm">
+          <i class="bi bi-shield-plus"></i> Analyze Your First Email
+        </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Clear History Confirmation Modal -->
+<div class="modal-backdrop" id="clearConfirmModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title" style="color: var(--spam-red);">
+        <i class="bi bi-exclamation-triangle-fill"></i> Clear All History?
+      </h3>
+      <button class="modal-close" id="closeClearModalBtn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 14px; color: var(--text-main); line-height: 1.5;">
+        Are you sure you want to permanently delete all prediction history records from your local database? This action cannot be undone.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary btn-sm" id="cancelClearBtn">Cancel</button>
+      <form method="POST" action="{{ url_for('clear_history') }}">
+        <button type="submit" class="btn btn-danger btn-sm">
+          <i class="bi bi-trash3-fill"></i> Yes, Clear History
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal-backdrop" id="detailModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">Prediction Details</h3>
+      <button class="modal-close" id="modalCloseBtn">&times;</button>
+    </div>
+    <div class="modal-body" id="modalContent"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" id="modalCloseBtn2">Close</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Confirmation Modal Handling
+  const clearModal = document.getElementById('clearConfirmModal');
+  const openClearBtn = document.getElementById('openClearHistoryModal');
+  const closeClearBtn = document.getElementById('closeClearModalBtn');
+  const cancelClearBtn = document.getElementById('cancelClearBtn');
+
+  if (openClearBtn) {
+    openClearBtn.addEventListener('click', () => {
+      clearModal.classList.add('open');
+    });
+  }
+
+  if (closeClearBtn) {
+    closeClearBtn.addEventListener('click', () => {
+      clearModal.classList.remove('open');
+    });
+  }
+
+  if (cancelClearBtn) {
+    cancelClearBtn.addEventListener('click', () => {
+      clearModal.classList.remove('open');
+    });
+  }
+
+  window.addEventListener('click', (e) => {
+    if (e.target === clearModal) {
+      clearModal.classList.remove('open');
+    }
+  });
+</script>
+{% endblock %}
